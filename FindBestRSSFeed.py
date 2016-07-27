@@ -23,6 +23,10 @@ def loadAndFindRssUrlCandidates(inProspectiveRssHostPageUrl):
 #Pre: ioCandidateList is a list of tuples containing RSS URLs and score integers
 def sortCandidatesByScore(ioCandidateList):
     #sorts ioCandidateList by score integers
+    
+    sorted_by_score = sorted(ioCandidateList, key=lambda tup: tup[0]) #Uses built-in Python sort method, defining the sorting key as the first value in the tuple
+    
+    return sorted_by_score
 
 #Post: Returns a list of dictionaries corresponding to each channel in given RSS URL (channel and feed are pretty much interchangable.  sometimes there is more than one channel in a feed, but I've never seen it.)
 def fetchRssChannels(inRssUrl):
