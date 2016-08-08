@@ -6,6 +6,8 @@ import feedparser
 from selenium import webdriver
 from bs4 import BeautifulSoup
 import sys
+import re
+import requests
 
 
 
@@ -32,39 +34,57 @@ def getTopProspectiveRssHosts(inPodcastName, inN):
 
 
 
-
-
-
-
-
 #Pre: Takes a base URL (stichter.com, TuneIn.com, etc.)
 #Post: A list of tuples: (podcast name, and category)
 def getPodcastNames():
     #Searches through base URL for podcasts names and categories
     #currently only works for sitcher's main list.
-    print "getPodcastNames"
-    browser = webdriver.Firefox()
-    browser.get('https://www.stitcher.com/stitcher-list/') #opens firefox browser to witdraw data
+    
+    browser = webdriver.Chrome()
+    base_url = u'https://www.stitcher.com/stitcher-list/'
+    
+    browser.get(base_url) #opens firefox browser to witdraw data
     html_source = browser.page_source #Maybe could be done with regex or etree, but this is much more elegant
     
     soup = BeautifulSoup(html_source, "html.parser") #allows for parsing and searching of HTML of page
     
-    podcast_table = soup.findAll("span", {"class": "sl-showName"}) #All podcast names are stored with this class name in a dynamically created table
-    category_table = soup.findAll("span", {"class": "sl-category"})  #All categories for podcasts found in previous line are stored with this class name in a dynamically created table
-
+    category_table = soup.findAll(id = "category-nav") #pulls the category list out of the HTML
+    category_link_table = category_table[0].findAll('a') #finds all link tags in the category table
+    
+    category_links = [u''] #adds a blank space for base URL search
     names = []
-    for p in podcast_table:
-    	names.append(p.find('a').contents[0])
-    
     categories = []
-    for p in category_table:
-    	categories.append(p.contents[0])
     
+    #searches through link tags and pulls the URL suffixes needed
+    for entry in category_link_table:
+    	entry_contents = entry.get('href') #goes through all 'a' tags and pulls the values for href (the URL suffixes)
+    	needed_entry_contents = re.match(r'(\/stitcher\-list\/)(.*)', entry_contents) #groups the redundant '/stitcher-list/' and unique part of URL suffix
+    	category_links.append(needed_entry_contents.group(2)) #saves the unique portion of the category URL suffixes
+    
+    #Cycles through each category, and pulls the podcast names and categories
+    for x in xrange(len(category_links)):
+    	browser.get(base_url+category_links[x])
+    	podcast_table = soup.findAll("span", {"class": "sl-showName"}) #All podcast names are stored with this class name in a dynamically created table
+    	category_table = soup.findAll("span", {"class": "sl-category"})  #All categories for podcasts found in previous line are stored with this class name in a dynamically created table
+    
+    	for p in podcast_table:
+    		names.append(p.find('a').contents[0]) #pulls podcast names from link contents
+    	
+    	for p in category_table:
+    		categories.append(p.contents[0]) #pulls category names from link contents
+    
+    ###########################################################################
+    ## TODO: NEED TO SEARCH FOR DUPLICATE ENTRIES                          ####
+    ## MAY NOT NEED TO USE BASE URL, SINCE IT CONTAINS "BEST OF" PODCASTS  ####
+    ###########################################################################
+    	
     podcasts = zip(names, categories) #creates a list of tuples where each entry is (name, category)
     
     browser.close()
     
     return podcasts
+
+
 
 
 
@@ -126,6 +146,8 @@ def fetchRssChannels(inRssUrl):
 
 
 
+
+
 #Pre: inPodcastName is the name of the podcast that we want to get RSS URL for
 #Post: A tuple with the following fields: (rssUrl, dictContainingRssInfo)
 def findBestRssFeed(inPodcastName):
@@ -157,8 +179,21 @@ def findBestRssFeed(inPodcastName):
 #Post: API Call for Postman Bookmark Submissions, containing podcast name, categories, and RSS URL for one podcast.
 def submitBookmarks(inPodcastInfoList):
     #Submits podcast names, categories, and RSS URLs to NoSQL server using Postman API
+
+    url = "https://tunr.soundspectrum.com/v1/bookmarks/"
     
+    payload = "-----011000010111000001101001\r\nContent-Disposition: form-data; name=\"title\"\r\n\r\n{{title}}\r\n-----011000010111000001101001\r\nContent-Disposition: form-data; name=\"url_type\"\r\n\r\nP\r\n-----011000010111000001101001\r\nContent-Disposition: form-data; name=\"url\"\r\n\r\n{{url}}\r\n-----011000010111000001101001--"
+    headers = {
+        'content-type': "multipart/form-data; boundary=---011000010111000001101001",
+        'authorization': "Token 1e71dfb93c8542561c4a2aa24c6ab81822562f27",
+        'cache-control': "no-cache",
+        'postman-token': "adb771ca-6273-47d8-14ef-3b3fde2def12"
+        }
     
+    response = requests.request("POST", url, data=payload, headers=headers)
+    
+    print(response.text)   
+        
     
     return "Submissions complete"
 
@@ -166,10 +201,18 @@ def submitBookmarks(inPodcastInfoList):
 
 
 
-#Pre: Takes string that contains URL of intended podcatcher site to scrape as a string
+#Pre: Takes string that contains string that indicates intended podcatcher site to scrape
 #Post: Completion message and a string of names, categories and RSS URLS Podcasts Added
-def main(inURL):
+def main(inPodcatcher):
     #calls all the functions that we have created
+    
+    
+    if inPodcatcher == "stitcher":
+        getPodcastNames()
+    
+    else:
+        return inPodcatcher + "not available yet"
+    
     return "Submissions complete."
 
 
@@ -179,5 +222,3 @@ def main(inURL):
 if __name__ == '__main__':
     getPodcastNames() #Soon will be main
 
-
-1470416137998
