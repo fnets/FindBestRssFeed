@@ -180,23 +180,20 @@ def findBestRssFeed(inPodcastName):
 def submitBookmarks(inPodcastInfoList):
     #Submits podcast names, categories, and RSS URLs to NoSQL server using Postman API
 
-    url = "https://tunr.soundspectrum.com/v1/bookmarks/"
-    
-    payload = "-----011000010111000001101001\r\nContent-Disposition: form-data; name=\"title\"\r\n\r\n{{title}}\r\n-----011000010111000001101001\r\nContent-Disposition: form-data; name=\"url_type\"\r\n\r\nP\r\n-----011000010111000001101001\r\nContent-Disposition: form-data; name=\"url\"\r\n\r\n{{url}}\r\n-----011000010111000001101001--"
-    headers = {
-        'content-type': "multipart/form-data; boundary=---011000010111000001101001",
-        'authorization': "Token 1e71dfb93c8542561c4a2aa24c6ab81822562f27",
-        'cache-control': "no-cache",
-        'postman-token': "adb771ca-6273-47d8-14ef-3b3fde2def12"
-        }
-    
-    response = requests.request("POST", url, data=payload, headers=headers)
-    
-    print(response.text)   
+    url = "https://tunr.soundspectrum.com//v1/bookmarks/" #API submission URL
+    for podcast in inPodcastInfoList:
+        title = podcast[0]
+        rss_link = podcast[2]
         
-    
-    return "Submissions complete"
-
+        payload = "-----011000010111000001101001\r\nContent-Disposition: form-data; name=\"title\"\r\n\r\n"+title+"\r\n-----011000010111000001101001\r\nContent-Disposition: form-data; name=\"url_type\"\r\n\r\nP\r\n-----011000010111000001101001\r\nContent-Disposition: form-data; name=\"categories\"\r\n\r\n15\r\n-----011000010111000001101001\r\nContent-Disposition: form-data; name=\"image\"\r\n\r\n\r\n-----011000010111000001101001\r\nContent-Disposition: form-data; name=\"url\"\r\n\r\n"+rss_link+"\r\n-----011000010111000001101001--"
+        headers = {
+            'content-type': "multipart/form-data; boundary=---011000010111000001101001",
+            'authorization': "Token 1e71dfb93c8542561c4a2aa24c6ab81822562f27",
+            'cache-control': "no-cache",
+            'postman-token': "ba7cc2a8-6b11-f3b0-b132-26be0df1e9d7"
+            }
+        
+        response = requests.request("POST", url, data=payload, headers=headers)
 
 
 
