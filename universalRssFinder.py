@@ -7,6 +7,7 @@ from selenium import webdriver
 from bs4 import BeautifulSoup
 import re
 import requests
+import time
 
 #
 # TODO:       
@@ -85,6 +86,9 @@ def getTopProspectiveRssHosts(inPodcastName, inN):
    #feedparser and feedparser2 added.  Both work great, but might consider finding lxml or scrapy solution, for channel searching purposes, or for name scraping purposes
    search_results = []
 
+   if siteCheckAssert('http://www.google.com') == False:
+      search_results = ['']
+      return 
    f = search( '"' + inPodcastName.encode('ascii','ignore') + '"' + ' podcast rss')
    #creates a generator object that searches for inPodcastName in google
    #and returns next URL of results
@@ -153,9 +157,9 @@ def sortCandidatesByScore(ioCandidateList):
    return sorted_by_score
 
 
-##############################################################
-#FUNCTIONS CALLED IN TO SCRAPE STITCHER AND INPUT RSS INTO DB
-##############################################################
+###################################################################
+#SCRAPE, POST, HTML ERROR, AND OTHER FUNCTIONS FOCUSED ON REQUESTS
+###################################################################
 
 #Pre: None, but eventually a string that indicates which podcatcher url to search
 #Post: Tuple that contains podcast names and their respective categories
@@ -261,6 +265,20 @@ def submitBookmarks(inPodcastInfoList):
       response = requests.request("POST", url, data=payload, headers=headers)
       assert ('csrf' not in response), "submitBookmarks: csrf rejected submission for" + title
    print 'Submissions complete.'
+
+def siteCheckAssert(url):
+  r = requests.get(url)
+  try:
+    if r.status_code == requests.codes.ok:
+      return True
+  except:
+    for x in xrange(3):
+      print "Encountered '%d' HTML ERROR.  Retrying in %d seconds. Retry '%d' more times." % (r.status_code, x*5 , 3-x)
+      time.sleep(5*x)
+      if r.status_code == requests.codes.ok:
+        return True
+    print 'Could not load page.'
+    return False
 
 
 ##############################################################
