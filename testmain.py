@@ -6,6 +6,12 @@ import datetime
 #Post: Submits names, categories and RSS URLS to Tunr DB and prints a list of names, categories and RSS URLS Podcasts Added
 def testmain(inPodcatcher):
     #calls all the functions that we have created
+    f = open('no_rss_found.txt', 'a')
+    f.write('\n\n'+str(datetime.datetime.now())+'\n')
+    f.close()
+    g = open('rss_found.txt', 'a')
+    g.write('\n\n'+str(datetime.datetime.now())+'\n')
+    g.close()
     
     if inPodcatcher == "stitcher":
         podcastsAndCategories = universalRssFinder.getPodcastNames()
@@ -16,19 +22,18 @@ def testmain(inPodcatcher):
     
     podcastInfo = []
     for podcastEntry in podcastsAndCategories: 
-        f = open('rss_found.txt', 'a')
-        f.write('\n\n'+str(datetime.datetime.now()))
+        g = open('rss_found.txt', 'a')
 
         rssURL = universalRssFinder.findBestRssFeed(podcastEntry[0])
         if rssURL != None:
-            podcastsAndCategoriesAndRssUrl = zip(podcastEntry,(rssURL,))
+            podcastsAndCategoriesAndRssUrl = podcastEntry +(rssURL,)
             podcastInfo.append(podcastsAndCategoriesAndRssUrl)
-            f.write('Name: '+ str(podcastEntry[0])+ ' URL: '+str(rssURL)+'\n')
+            g.write('Name: '+ str(podcastInfo[0])+ ' Category: '+str(podcastInfo[1])+' URL: '+ str(podcastInfo[2])+'\n')
             print rssURL
-        f.close()
+        g.close()
 
     for bookmark in podcastInfo:
-        submitBookmarks(bookmark)
+        universalRssFinder.submitBookmarks(bookmark)
 
 if __name__ == '__main__':
     testmain(sys.argv[1]) #Soon will be main

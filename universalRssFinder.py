@@ -5,20 +5,17 @@ from feedfinder2 import find_feeds
 import feedparser
 from selenium import webdriver
 from bs4 import BeautifulSoup
-import sys
 import re
 import requests
-import datetime
-
 
 #
 # TODO: - Category Dictionary
 #
-#       - Make this more readable and abstract
+#      - Make this more readable and abstract
 #
 #      - Call 503 error exception
-#   
-#      - Call unicode error exception (Radio Show – Hugh Hewitt)
+#
+#      - Write to CSV instead of txt
 #
 #      - Speed up program
 #         - Time modules
@@ -36,7 +33,6 @@ def findBestRssFeed(inPodcastName):
    print inPodcastName
    topProspects = getTopProspectiveRssHosts(inPodcastName, 3)
    f = open('no_rss_found.txt', 'a')
-   f.write('\n\n'+str(datetime.datetime.now()))
 
    rssCandidates = []
 
@@ -51,18 +47,19 @@ def findBestRssFeed(inPodcastName):
    #Finalize RSS URL by verifying it
    for i in rssCandidates:
       parsedCandidate = feedparser.parse(i[0])
+
       try:
         feedTitle = parsedCandidate.feed.title
         if feedTitle.lower() == inPodcastName.lower():
          return i[0]
       except AttributeError:
         print i[0]+ ' has no feedtitle'
-        f.write('Name: '+ inPodcastName+ ' URL: '+str(i[0])+'\n')
+        f.write('Name: '+ inPodcastName.encode('ascii','ignore') + ' URL: ' + i[0]+'\n')
         f.close()
         return None
 
    print inPodcastName + ' has no correct candidates'
-   f.write('Name: '+ inPodcastName+ ' URL: '+str(i[0])+'\n')
+   f.write('Name: '+ inPodcastName.encode('ascii','ignore')  + ' URL: ' + i[0]+'\n')
    f.close()
    return None
 
@@ -82,7 +79,7 @@ def getTopProspectiveRssHosts(inPodcastName, inN):
    #feedparser and feedparser2 added.  Both work great, but might consider finding lxml or scrapy solution, for channel searching purposes, or for name scraping purposes
    search_results = []
 
-   f = search( '"' + inPodcastName + '"' + ' podcast rss')
+   f = search( '"' + inPodcastName.encode('ascii','ignore') + '"' + ' podcast rss')
    #creates a generator object that searches for inPodcastName in google
    #and returns next URL of results
 
@@ -100,15 +97,15 @@ def loadAndFindRssUrlCandidates(inProspectiveRssHostPageUrl):
    scoredCandidates = []
 
    try:
-   print 'finding feeds for: ' + inProspectiveRssHostPageUrl
-   feeds = find_feeds(inProspectiveRssHostPageUrl) #returns list of RSS feeds found from input URL, through some reliable methods
-   print 'found feeds for: ' + inProspectiveRssHostPageUrl
+       print 'finding feeds for: ' + inProspectiveRssHostPageUrl
+       feeds = find_feeds(inProspectiveRssHostPageUrl) #returns list of RSS feeds found from input URL, through some reliable methods
+       print 'found feeds for: ' + inProspectiveRssHostPageUrl
    except KeyboardInterrupt:
-   f = open('no_rss_found.txt', 'a')
-   f.write('Feed not found for: '+inProspectiveRssHostPageUrl+'\n')
-   f.close()
-   print('inProspectiveRssHostPageUrl skipped:' + inProspectiveRssHostPageUrl)
-   return ""
+       f = open('no_rss_found.txt', 'a')
+       f.write('Feed not found for: '+inProspectiveRssHostPageUrl.encode('ascii','ignore')+'\n')
+       f.close()
+       print('inProspectiveRssHostPageUrl skipped:' + inProspectiveRssHostPageUrl)
+       return ""
 
    if not feeds: #checks if feeds list is empty, due to empty lists evaluating as false
      return ""
@@ -263,6 +260,3 @@ def main(inPodcatcher):
 
 if __name__ == '__main__':
    getPodcastNames() #Soon will be main
-
-
-
