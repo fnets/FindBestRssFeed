@@ -9,11 +9,17 @@ import re
 import requests
 
 #
-# TODO: - Category Dictionary
+# TODO:       
+#       - assert for 503
+#          - Write try except around FindBestRss
 #
 #      - Make this more readable and abstract
-#
-#      - Call 503 error exception
+  #      - Think about making dictionaries relate directly catIDs to urls, because we can always just re-assign them if they break or add new ones
+       # - Think about making separate nameScrapers for each podcatcher, for readability and robustness (if one podcatcher breaks)
+       # - Re-write breadth-wise, following tru.py psuedo [IN PROGRESS]
+#          
+#      
+#      - Write Dupe check
 #
 #      - Write to CSV instead of txt
 #
@@ -23,7 +29,7 @@ import requests
 #         - Check for duped podcasts
 #         - Check for duped google results and filter clearly wrong
 #         - Add timeout for feed_finder
-#          - Add .joins
+#         - Add .joins
 #
 
 #Pre: inPodcastName is the name of the podcast that we want to get RSS URL for
@@ -153,62 +159,82 @@ def sortCandidatesByScore(ioCandidateList):
 
 #Pre: None, but eventually a string that indicates which podcatcher url to search
 #Post: Tuple that contains podcast names and their respective categories
-def getPodcastNames():
+def scrapePodcastNames(inScraperID):
    #Searches through base URL for podcasts names and categories
    #currently only works for sitcher's site.
-   #HTML PARSE MESSAGE DOES NOT COME FROM HERE
+   
+   if inScraperID.lower() == 'stitcher':
 
-   browser = webdriver.Chrome()
-   base_url = u'https://www.stitcher.com/stitcher-list/'
+     catDict = { #change these to category URLs
+                  'Comedy': 18,
+                  'Business': 14,
+                  'News & Politics': 41,
+                  'Society & Culture': 13,
+                  'Education': 27,
+                  'Entertainment': 52,
+                  'Games & Hobbies': 30,
+                  'Lifestyle & Health': 11,
+                  'Music Commentary': 39,
+                  'Parenting, Family, & Kids': 0,
+                  'Science & Medicine': 48,
+                  'Spirituality & Religion': 47,
+                  'Sports':49,
+                  'Technology': 48,
+                  'World & International':41,
+                  'Storytelling': 13,
+                  'Pop Culture, TV & Film': 52,
+                }
+     base_url = u'https://www.stitcher.com/stitcher-list/'
 
-   browser.get(base_url) #opens chrome browser to witdraw data
-   html_source = browser.page_source #Maybe could be done with regex or etree, but this is much more elegant
+   html_source = scrapeSource(base_url)
 
    soup = BeautifulSoup(html_source, "html.parser") #allows for parsing and searching of HTML of page
-
-   category_table = soup.findAll(id = "category-nav") #pulls the category list out of the HTML
-   category_link_table = category_table[0].findAll('a') #finds all link tags in the category table
 
    category_links = [u''] #adds a blank space for base URL search
    names = []
    categories = []
 
-   #searches through link tags and pulls the URL suffixes needed
-   for entry in category_link_table:
-     entry_contents = entry.get('href') #goes through all 'a' tags and pulls the values for href (the URL suffixes)
-     needed_entry_contents = re.match(r'(\/stitcher\-list\/)(.*)', entry_contents) #groups the redundant '/stitcher-list/' and unique part of URL suffix
-     category_links.append(needed_entry_contents.group(2)) #saves the unique portion of the category URL suffixes
+   if inScraperID.lower() == 'stitcher': #This will be different for each Podcatcher
+      category_table = soup.findAll(id = "category-nav") #pulls the category list out of the HTML
+      category_link_table = category_table[0].findAll('a') #finds all link tags in the category table
 
+     #searches through link tags and pulls the URL suffixes needed
+      for entry in category_link_table:
+        entry_contents = entry.get('href') #goes through all 'a' tags and pulls the values for href (the URL suffixes)
+        needed_entry_contents = re.match(r'(\/stitcher\-list\/)(.*)', entry_contents) #groups the redundant '/stitcher-list/' and unique part of URL suffix
+        category_links.append(needed_entry_contents.group(2)) #saves the unique portion of the category URL suffixes     
+   
    #Cycles through each category, and pulls the podcast names and categories
    #for x in xrange():
-   #browser.get(base_url+category_links[x])
-   browser.get(base_url)
-   print "only getting base URL for testing brevity"
+     #browser.get(base_url+category_links[x])
+      print "only getting base URL for testing brevity"
 
-   podcast_table = soup.findAll("span", {"class": "sl-showName"}) #All podcast names are stored with this class name in a dynamically created table
-   category_table = soup.findAll("span", {"class": "sl-category"})  #All categories for podcasts found in previous line are stored with this class name in a dynamically created table
 
-   for p in podcast_table:
-     names.append(unicode(p.find('a').contents[0])) #pulls podcast names from link contents
+      podcast_table = soup.findAll("span", {"class": "sl-showName"}) #All podcast names are stored with this class name in a dynamically created table
+      category_table = soup.findAll("span", {"class": "sl-category"})  #All categories for podcasts found in previous line are stored with this class name in a dynamically created table
 
-   for p in category_table:
-     categories.append(unicode(p.contents[0])) #pulls category names from link contents
+      for p in podcast_table:
+        names.append(unicode(p.find('a').contents[0])) #pulls podcast names from link contents
 
-   ###########################################################################
-   ## TODO: NEED TO SEARCH FOR DUPLICATE ENTRIES                    ####
-   ## MAY NOT NEED TO USE BASE URL, SINCE IT CONTAINS "BEST OF" PODCASTS  ####
-   ###########################################################################
+      for p in category_table:
+        if catDict[p.contents[0]] != 0: #does not include family and children podcasts
+          categories.append(unicode(catDict[p.contents[0]])) #pulls category names from link contents
 
    podcasts = zip(names, categories) #creates a list of tuples where each entry is (name, category)
 
-   browser.close()
 
    assert (type(podcasts[1]) is tuple), "getPodcastNames: List is not tuples"
    assert (podcasts), "getPodcastNames: List is empty"
 
    return podcasts
 
+def scrapeSource(url):
+  browser = webdriver.Chrome()
+  browser.get(url) #opens chrome browser to witdraw data
+  html_source = browser.page_source #Maybe could be done with regex or etree, but this is much more elegant
+  browser.close()
 
+  return html_source
 
 #Pre: Takes a 3-item list of podcast names, categories, and RSS URLs.
 #Post: API Call for Postman Bookmark Submissions, containing podcast name, categories, and RSS URL for one podcast.
