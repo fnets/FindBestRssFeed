@@ -12,9 +12,34 @@ def testmain(inPodcatcher):
     g = open('rss_found.txt', 'a')
     g.write('\n\n'+str(datetime.datetime.now())+'\n')
     g.close()
-    
-    if inPodcatcher == "stitcher":
-        podcastsAndCategories = universalRssFinder.getPodcastNames()
+
+
+    '''Tunr catID. worklistTuple
+inFullWorklist = [
+    ( 17, [             # Comedy - Performance
+        ( "stitcher",  "subdir123/123" ),
+        ( "stitcher",  "subdir123/859" ),
+        ( "tunein",    "blah-223" ),
+        ( "tunein",    "blah-224" ) ]
+    ),
+    ( 22, [             # Comedy - Discussion
+        ( "stitcher",  "subdir/11" ),
+        ( "tunein",    "blah-229" ) ]
+
+    for i in inFullWorkList
+
+        catID       = i[0]
+        catWorkList = i[1]
+
+        podcastNameDict = { }
+
+         for j in catWorkList:
+            scraperID  = j[0]
+            scraperArg = j[1]
+        '''
+
+    if inPodcatcher == 'stitcher':
+        podcastsAndCategories = universalRssFinder.scrapePodcastNames(inPodcatcher)
 
     else:
         print inPodcatcher + " not available yet"
@@ -28,7 +53,7 @@ def testmain(inPodcatcher):
         if rssURL != None:
             podcastsAndCategoriesAndRssUrl = podcastEntry +(rssURL,)
             podcastInfo.append(podcastsAndCategoriesAndRssUrl)
-            g.write('Name: '+ str(podcastInfo[0])+ ' Category: '+str(podcastInfo[1])+' URL: '+ str(podcastInfo[2])+'\n')
+            g.write('Name: '+ str(podcastsAndCategoriesAndRssUrl[0])+ ' Category: '+str(podcastsAndCategoriesAndRssUrl[1])+' URL: '+ str(podcastsAndCategoriesAndRssUrl[2])+'\n')
             print rssURL
         g.close()
 

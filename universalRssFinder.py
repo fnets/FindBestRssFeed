@@ -108,6 +108,12 @@ def loadAndFindRssUrlCandidates(inProspectiveRssHostPageUrl):
 
    try:
        print 'finding feeds for: ' + inProspectiveRssHostPageUrl
+       if siteCheckAssert(inProspectiveRssHostPageUrl) == False:
+           f = open('no_rss_found.txt', 'a')
+           f.write('Feed not found for: '+inProspectiveRssHostPageUrl.encode('ascii','ignore')+'\n')
+           f.close()
+           print('inProspectiveRssHostPageUrl skipped:' + inProspectiveRssHostPageUrl)
+           return ""
        feeds = find_feeds(inProspectiveRssHostPageUrl) #returns list of RSS feeds found from input URL, through some reliable methods
        print 'found feeds for: ' + inProspectiveRssHostPageUrl
    except KeyboardInterrupt:
