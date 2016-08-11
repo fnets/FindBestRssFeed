@@ -11,17 +11,16 @@ import time
 
 #
 # TODO:       
-#       - assert for 503
-#          - Write try except around FindBestRss
 #
 #      - Make this more readable and abstract
   #      - Think about making dictionaries relate directly catIDs to urls, because we can always just re-assign them if they break or add new ones
        # - Think about making separate nameScrapers for each podcatcher, for readability and robustness (if one podcatcher breaks)
-       # - Re-write breadth-wise, following tru.py psuedo [IN PROGRESS]
 #          
-#      
-#      - Write Dupe check
-#
+#      - Write pause factor into Google search (arg 'pause'=2.0 by default), Runs about 20 mins before 503 kicks in. (27 feeds found, 12 not found)
+#           - Proposal:  Include timer function.  When it hits 15-18 minutes, sleep for 5 minutes.  Complete 100 entries in ~1hr
+#       - Write other podcatcher search algorithms (tunin, etc.)
+#           - Predict what parts can be abstracted away
+#        
 #      - Write to CSV instead of txt
 #
 #      - Speed up program
@@ -108,12 +107,6 @@ def loadAndFindRssUrlCandidates(inProspectiveRssHostPageUrl):
 
    try:
        print 'finding feeds for: ' + inProspectiveRssHostPageUrl
-       if siteCheckAssert(inProspectiveRssHostPageUrl) == False:
-           f = open('no_rss_found.txt', 'a')
-           f.write('Feed not found for: '+inProspectiveRssHostPageUrl.encode('ascii','ignore')+'\n')
-           f.close()
-           print('inProspectiveRssHostPageUrl skipped:' + inProspectiveRssHostPageUrl)
-           return ""
        feeds = find_feeds(inProspectiveRssHostPageUrl) #returns list of RSS feeds found from input URL, through some reliable methods
        print 'found feeds for: ' + inProspectiveRssHostPageUrl
    except KeyboardInterrupt:
@@ -162,6 +155,16 @@ def sortCandidatesByScore(ioCandidateList):
 
    return sorted_by_score
 
+
+def TRU_assert( inCond, inMsg = None, isFatal = False ):
+    if not inCond:
+        if inMsg == None:
+            inMsg = "*** TRU ASSERTION FAILED ***"
+
+        if isFatal:
+            raise Exception( inMsg )
+        else:
+            print inMsg
 
 ###################################################################
 #SCRAPE, POST, HTML ERROR, AND OTHER FUNCTIONS FOCUSED ON REQUESTS
@@ -238,6 +241,7 @@ def scrapePodcastNames(inScraperID):
 
    return podcasts
 
+
 def scrapeSource(url):
   browser = webdriver.Chrome()
   browser.get(url) #opens chrome browser to witdraw data
@@ -245,6 +249,10 @@ def scrapeSource(url):
   browser.close()
 
   return html_source
+
+
+
+
 
 #Pre: Takes a 3-item list of podcast names, categories, and RSS URLs.
 #Post: API Call for Postman Bookmark Submissions, containing podcast name, categories, and RSS URL for one podcast.
@@ -274,10 +282,9 @@ def submitBookmarks(inPodcastInfoList):
 
 def siteCheckAssert(url):
   r = requests.get(url)
-  try:
-    if r.status_code == requests.codes.ok:
-      return True
-  except:
+  if r.status_code == requests.codes.ok:
+   return True
+  else:
     for x in xrange(3):
       print "Encountered '%d' HTML ERROR.  Retrying in %d seconds. Retry '%d' more times." % (r.status_code, x*5 , 3-x)
       time.sleep(5*x)
@@ -297,16 +304,70 @@ def siteCheckAssert(url):
 #Post: Completion message and a string of names, categories and RSS URLS Podcasts Added
 def main(inPodcatcher):
    #calls all the functions that we have created
+import sys
+import universalRssFinder
+import datetime
 
-   if inPodcatcher == "stitcher":
-      getPodcastNames()
+#Pre: Takes string that contains string that indicates intended podcatcher site to scrape
+#Post: Submits names, categories and RSS URLS to Tunr DB and prints a list of names, categories and RSS URLS Podcasts Added
+def testmain(inPodcatcher):
+    #calls all the functions that we have created
+    f = open('no_rss_found.txt', 'a')
+    f.write('\n\n'+str(datetime.datetime.now())+'\n')
+    f.close()
+    g = open('rss_found.txt', 'a')
+    g.write('\n\n'+str(datetime.datetime.now())+'\n')
+    g.close()
 
-   else:
-      return inPodcatcher + "not available yet"
+
+    '''Tunr catID. worklistTuple
+inFullWorklist = [
+    ( 17, [             # Comedy - Performance
+        ( "stitcher",  "subdir123/123" ),
+        ( "stitcher",  "subdir123/859" ),
+        ( "tunein",    "blah-223" ),
+        ( "tunein",    "blah-224" ) ]
+    ),
+    ( 22, [             # Comedy - Discussion
+        ( "stitcher",  "subdir/11" ),
+        ( "tunein",    "blah-229" ) ]
+    '''
+    #Create Worklist with loop
+    
+    for i in inFullWorkList:
+        catID      = i[0]
+        scraperID  = i[1]
+        scraperArg = i[2]
+    
+        # Add podcast names we don't yet know about to our aggregate podcast name dict
+        if 1:
+            podcastNameDict = dict()
+            podcastNames = scrapePodcastNames( scraperID, scraperArg )
+            TRU_assert( podcastNames, "Got zero podcast names for scrapePodcastNames( '%s', '%s' )" % ( scraperID, scraperArg ) )
+            
+            for k in podcastNames:
+                if k in podcastNameDict:
+                    print "Found podcast DUPE '%s' for scraper = '%s'" % ( k, scraperID )
+                else:
+                    print "Found podcast      '%s' for scraper = '%s'" % ( k, scraperID )
+                    podcastNameDict[k] = None
 
 
-   return "Submissions complete."
+    # At this point, podcastNameDict[] contains all the podcast names we plan to submit for our given Tunr category ID
+    for j in podcastNameDict:
+        g = open('rss_found.txt', 'a')
+         
+        rssURL = findBestRssFeed( j )
+        if rssURL == None:
+            TRU_assert( False, "Failed to get a rss url for podcast '%s'" % j )
+        else:
+            podcastNameDict[j] = rssURL
+            podcastsAndCategoriesAndRssUrl = podcastEntry +(rssURL,)
+            podcastInfo.append(podcastsAndCategoriesAndRssUrl)
+            g.write('Name: '+ str(podcastsAndCategoriesAndRssUrl[0])+ ' Category: '+str(podcastsAndCategoriesAndRssUrl[1])+' URL: '+ str(podcastsAndCategoriesAndRssUrl[2])+'\n')
 
+    for j in podcastNameDict:
+        submitBookmarks( catID, j, podcastNameDict[j] )
 
 if __name__ == '__main__':
-   getPodcastNames() #Soon will be main
+    main(sys.argv[1])
