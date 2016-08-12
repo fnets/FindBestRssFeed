@@ -34,25 +34,29 @@ def tuneinPodcastScrape(inScraperID):
 
     soup = BeautifulSoup(html_source, "html.parser") #allows for parsing and searching of HTML of page
 
-    category_links = [u''] #adds a blank space for base URL search
     names = []
     categories = []
-
-    category_table = soup.find_all('ul',{'class' : "column"}) #pulls the category list out of the HTML
-    category_link_table = category_table[0].find_all('a',{'class' : "overlay-hover-trigger"}) #pulls the category list out of the HTML
+    category_link_table = []
+    
+    column_table = soup.find_all('ul',{'class' : "column"}) #pulls the category list out of the HTML
+    for x in xrange(len(column_table)):
+        category_link_table.append(column_table[x].find_all('a',{'class' : "overlay-hover-trigger"})) #pulls the category list out of the HTML
+    
+    category_links = []
     for entry in category_link_table:
-        entry_contents = entry.get('href') #goes through all 'a' tags and pulls the values for href (the URL suffixes)
+        entry_contents = entry[0].get('href') #goes through all 'a' tags and pulls the values for href (the URL suffixes)
         needed_entry_contents = re.match(r'(\/radio\/)(.*)', entry_contents) #groups the redundant '/stitcher-list/' and unique part of URL suffix
         category_links.append(needed_entry_contents.group(2)) #saves the unique portion of the category URL suffixes             
-    
+    print category_links
     names = []
     for x in xrange(len(category_links)):
         html_source = scrapeSource(base_url + category_links[x])
+        
         soup = BeautifulSoup(html_source, "html.parser")
         show_table = soup.find_all('h3',{'class' : "title"})
         for x in xrange(len(show_table)):
             names.append(show_table[x].get_text())
-    print names    
+    print names
     '''for x in xrange(len(category_link_table)):
       print 'link: ' + category_link_table.contents[0]
     
@@ -112,4 +116,3 @@ def scrapeSource(url):
 
 if __name__ == '__main__':
     tuneinPodcastScrape(sys.argv[1])
-
